@@ -4,12 +4,6 @@ from utility_functions import import_and_wrangle_data
 from ShortPutBacktester import ShortPutBacktester
 import requests
 
-url = 'https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=IBM&date=2020-01-01&apikey=MSUPEQIN6JN6PINZ'
-r = requests.get(url)
-data = r.json()
-
-print(data)
-
 
 # 1) Set up settings for the backtester
 settings = {
