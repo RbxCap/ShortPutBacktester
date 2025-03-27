@@ -16,7 +16,7 @@ settings = {
     #  ["3pct_maximum_loss_on_total_aum_per_trade", "inverse_maximum_loss_on_vola_bucket"] -> for the first version,
     # you can set the number in the string to apply the percentage threshold in the backtest,
     # e.g. 5pct_maximum_loss_on_total_aum_per_trade would set the threshold to 5% for the backtest.
-    "parquet_file_path": r"C:\Users\Marcel\Desktop\Python Projects\spy_option_chains.parquet"
+    "parquet_file_path": r"pathtooptionsdata"
 }
 
 # 2) Import option data
