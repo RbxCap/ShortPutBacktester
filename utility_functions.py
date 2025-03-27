@@ -1,11 +1,15 @@
 import pandas as pd
 import os
+import requests
+from datetime import datetime, timedelta
+from tqdm import tqdm
+from typing import Optional
 
 
 def import_and_wrangle_data(path_to_input):
     """
 
-        Author: Marcel Sibbe, marcel-sibbe@web.de
+    Author: Marcel Sibbe, marcel-sibbe@web.de
 
 
     Imports options data from a specified parquet file, performs data wrangling, and returns a processed DataFrame.
@@ -37,6 +41,7 @@ def import_and_wrangle_data(path_to_input):
     # Now you can use the DataFrame 'df' for further analysis or processing
     option_data['option_id'] = option_data.apply(
         lambda row: f"{row['symbol']}_{row['strike']}_{row['option_expiration']}", axis=1)
+
     # number of days to expiry
 
     option_data["date"] = pd.to_datetime(option_data["date"], format="%Y-%m-%d")
@@ -56,3 +61,4 @@ def import_and_wrangle_data(path_to_input):
     option_data["stock_price_close"] = option_data["stock_price_close"].fillna(method='ffill')
 
     return option_data
+

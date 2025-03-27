@@ -52,6 +52,8 @@ class ShortPutBacktester:
 
         assert isinstance(settings, dict), "Input settings must be provided as dictionary"
         assert isinstance(options_data, pd.DataFrame), "Options data must be provided as pd.DataFrame"
+        assert "call_put" in options_data.columns, "'call_put' column is missing in options_data"
+        assert (options_data["call_put"] == "put").sum() > 0, "No puts in options data"
 
         required_keys = [
             "total_aum",
@@ -130,11 +132,27 @@ class ShortPutBacktester:
         positions.loc[:, 'bid'] = positions['option_id'].map(options_data_sorted['bid'])
         positions.loc[:, 'ask'] = positions['option_id'].map(options_data_sorted['ask'])
         positions.loc[:, 'mean_price'] = positions['option_id'].map(options_data_sorted['mean_price'])
-        positions.loc[:, 'delta'] = positions['option_id'].map(options_data_sorted['delta'])
-        positions.loc[:, 'vega'] = positions['option_id'].map(options_data_sorted['vega'])
-        positions.loc[:, 'gamma'] = positions['option_id'].map(options_data_sorted['gamma'])
-        positions.loc[:, 'theta'] = positions['option_id'].map(options_data_sorted['theta'])
-        positions.loc[:, 'rho'] = positions['option_id'].map(options_data_sorted['rho'])
+
+        positions.loc[:, 'delta'] = positions['option_id'].map(
+            lambda x: float(options_data_sorted['delta'][x][0]) if isinstance(options_data_sorted['delta'][x],
+                                                                              list) else float(
+                options_data_sorted['delta'][x]))
+        positions.loc[:, 'vega'] = positions['option_id'].map(
+            lambda x: float(options_data_sorted['vega'][x][0]) if isinstance(options_data_sorted['vega'][x],
+                                                                             list) else float(
+                options_data_sorted['vega'][x]))
+        positions.loc[:, 'gamma'] = positions['option_id'].map(
+            lambda x: float(options_data_sorted['gamma'][x][0]) if isinstance(options_data_sorted['gamma'][x],
+                                                                              list) else float(
+                options_data_sorted['gamma'][x]))
+        positions.loc[:, 'theta'] = positions['option_id'].map(
+            lambda x: float(options_data_sorted['theta'][x][0]) if isinstance(options_data_sorted['theta'][x],
+                                                                              list) else float(
+                options_data_sorted['theta'][x]))
+        positions.loc[:, 'rho'] = positions['option_id'].map(
+            lambda x: float(options_data_sorted['rho'][x][0]) if isinstance(options_data_sorted['rho'][x],
+                                                                            list) else float(
+                options_data_sorted['rho'][x]))
 
         # Check if active -> positions is active if option_expiration is after current_date
         positions.loc[:, 'is_active'] = positions['current_date'] < positions['option_expiration']
@@ -151,6 +169,7 @@ class ShortPutBacktester:
             expired["stock_price_close"] = expired["stock_price_close"].fillna(current_stock_price)
 
         for i in range(expired.shape[0]):
+            expired["pnl"] = expired["pnl"].astype(float)
             expired.loc[:, "pnl"].iloc[i] = self.short_put_payoff(
                 expired["stock_price_close"].iloc[i],
                 expired["strike"].iloc[i],
@@ -252,6 +271,10 @@ class ShortPutBacktester:
         Returns:
             float: Maximum loss for the short put position.
         """
+        short_put_strike = float(short_put_strike.iloc[0])
+        option_premium_received = float(option_premium_received.iloc[0])
+
+        # Now perform the subtraction
         return short_put_strike - option_premium_received
 
     def trade_sizing_function(self, option_to_sell: pd.DataFrame, sizing_function: str):
@@ -307,7 +330,7 @@ class ShortPutBacktester:
         # pre-checks -> Only put for call_put eligible (given input data has only puts, but this could be different with
         # another dataset)
 
-        option_chain = option_chain[option_chain["call_put"] == "P"]
+        option_chain = option_chain[option_chain["type"] == "put"]
 
         # Calculate the absolute distance to the target TTM for each row
         option_chain["distance_to_target_ttm"] = abs(option_chain["ttm"] - self.settings["ttm"])
@@ -317,6 +340,14 @@ class ShortPutBacktester:
 
         # Subset the DataFrame to rows with the minimum distance to the target TTM
         sub_option_chain_ttm = option_chain.loc[option_chain["distance_to_target_ttm"] == min_distance_ttm].copy()
+
+        columns_to_convert = ['delta', 'gamma', 'theta', 'vega', 'rho']
+
+        for col in columns_to_convert:
+            sub_option_chain_ttm[col] = pd.to_numeric(sub_option_chain_ttm[col], errors='coerce')
+
+        # Handle NaN values in the specified columns
+        sub_option_chain_ttm[columns_to_convert] = sub_option_chain_ttm[columns_to_convert].fillna(0)
 
         # Calculate the absolute distance to the target delta for each row in the subset
         sub_option_chain_ttm["distance_to_target_delta"] = abs(
@@ -364,11 +395,7 @@ class ShortPutBacktester:
         date_range = pd.date_range(start=self.start_date, end=self.end_date)
 
         # just needed to clean the output a little bit
-        columns_to_drop = [
-            'open', 'high', 'low', 'close', 'bid', 'ask', 'mean_price',
-            'settlement', 'iv', 'volume', 'open_interest', 'stock_price_for_iv',
-            'forward_price', 'isinterpolated', 'delta'
-        ]
+        columns_to_drop = ["mark"]
 
         # Filter out weekends (Saturday and Sunday) -> Keep only weekdays in range
         weekdays = date_range[date_range.weekday < 5]
