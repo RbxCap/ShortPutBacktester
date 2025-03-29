@@ -52,8 +52,8 @@ class ShortPutBacktester:
 
         assert isinstance(settings, dict), "Input settings must be provided as dictionary"
         assert isinstance(options_data, pd.DataFrame), "Options data must be provided as pd.DataFrame"
-        assert "call_put" in options_data.columns, "'call_put' column is missing in options_data"
-        assert (options_data["call_put"] == "put").sum() > 0, "No puts in options data"
+        assert "type" in options_data.columns, "'type' column is missing in options_data"
+        assert (options_data["type"] == "put").sum() > 0, "No puts in options data"
 
         required_keys = [
             "total_aum",
@@ -242,22 +242,39 @@ class ShortPutBacktester:
         return
 
     @staticmethod
-    def short_put_payoff(stock_price: float, strike: float, option_income: float):
+    def short_put_payoff(stock_price, strike, option_income):
         """
         Calculate the payoff for a short put position.
 
         Parameters:
-            - stock_price (float): Current stock price.
-            - strike (float): Strike price of the put option.
-            - option_income (float): Income received from selling the put option.
+            - stock_price: Current stock price (float or convertible).
+            - strike: Strike price of the put option (float or convertible).
+            - option_income: Income received from selling the put option (float or convertible).
 
         Returns:
             float: Payoff for the short put position.
         """
-        if stock_price > strike:
-            return option_income
-        else:
-            return stock_price - strike + option_income
+        try:
+            # Extract the first value if input is a numpy array
+            if isinstance(stock_price, np.ndarray):
+                stock_price = stock_price.item()
+            if isinstance(strike, np.ndarray):
+                strike = strike.item()
+            if isinstance(option_income, np.ndarray):
+                option_income = option_income.item()
+
+            # Convert to float if input is a string
+            stock_price = float(stock_price)
+            strike = float(strike)
+            option_income = float(option_income)
+
+            # Compute the payoff
+            return option_income if stock_price > strike else stock_price - strike + option_income
+
+        except (ValueError, TypeError) as e:
+            print(f"Error in short_put_payoff: {e}")
+            return None  # Alternative handling (e.g., return 0 or np.nan)
+
 
     @staticmethod
     def max_loss(short_put_strike: float, option_premium_received: float):
