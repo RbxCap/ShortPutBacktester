@@ -170,7 +170,7 @@ class ShortPutBacktester:
 
         for i in range(expired.shape[0]):
             expired["pnl"] = expired["pnl"].astype(float)
-            expired.loc[:, "pnl"].iloc[i] = self.short_put_payoff(
+            expired.loc[i, "pnl"] = self.short_put_payoff(
                 expired["stock_price_close"].iloc[i],
                 expired["strike"].iloc[i],
                 expired["income_per_option"].iloc[i]
@@ -458,6 +458,7 @@ class ShortPutBacktester:
                 self.closed_positions = self.closed_positions
             else:
                 # Concatenate only if self.open_positions is not empty
+                expired = expired.dropna(axis=1, how='all')  # Drop columns with all NA values
                 self.closed_positions = pd.concat([self.closed_positions, expired], ignore_index=True)
 
             self.received_premium = 0
@@ -509,7 +510,7 @@ class ShortPutBacktester:
         mean_return = np.mean(daily_returns) * 252  # Assuming 252 trading days in a year
 
         # Calculate annualized volatility (risk)
-        volatility = np.std(daily_returns) * np.sqrt(252)
+        volatility = np.std(daily_returns, axis=0) * np.sqrt(252)
 
         # Calculate total return
         total_return = (stock_prices.iloc[-1] / stock_prices.iloc[0]) - 1
@@ -558,7 +559,7 @@ class ShortPutBacktester:
         max_drawdown_series = ((portfolio_values / portfolio_values.cummax()) - 1)
 
         # Calculate rolling volatility
-        rolling_volatility = daily_returns.rolling(window=rolling_window).std()
+        rolling_volatility = daily_returns.rolling(window=rolling_window).std(axis=0)
 
         # Set up the figure and axes
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 12), sharex=True)

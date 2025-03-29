@@ -5,7 +5,7 @@ from ShortPutBacktester import ShortPutBacktester
 # 1) Set up settings for the backtester
 settings = {
     "total_aum": 100_000_000,  # Assets Under Management of total portfolio in $
-    "short_put_bucket": 0.2,  # Pct value of total AUM allocated to short put strategy->
+    "short_put_bucket": 0.5,  # Pct value of total AUM allocated to short put strategy->
     # only relevant for [inverse_maximum_loss_on_vola_bucket] trade sizing.
     "spx_contract_size": 100,  # Assumption: All options have a contract size of 100
     "target_delta": -0.10,  # find option from daily chain with delta closest to -0.10
